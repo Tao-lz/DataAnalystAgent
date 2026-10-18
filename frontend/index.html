@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数据分析 Agent 控制台</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">DA</span>
+    <div>
+      <h1>数据分析 Agent 控制台</h1>
+      <p id="subtitle">LangGraph · Tool Calling · Pandas · Matplotlib</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span id="health-badge" class="badge">检查中…</span>
+    <button class="ghost" id="btn-tools">工具清单</button>
+    <button class="ghost" id="btn-reset-conv">新会话</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ------------------------------ 左侧：数据 ------------------------------ -->
+  <aside class="panel sidebar">
+    <section>
+      <h2>1 · 上传数据集</h2>
+      <div id="dropzone" class="dropzone">
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls,.txt,.tsv" hidden>
+        <p class="dz-title">拖拽 CSV / Excel 到这里</p>
+        <p class="dz-hint">或 <button class="link" id="btn-pick">点击选择文件</button></p>
+        <p class="dz-hint small">支持 .csv / .xlsx / .xls / .tsv，自动识别编码与表头</p>
+      </div>
+      <div id="upload-status" class="status"></div>
+    </section>
+
+    <section>
+      <h2>2 · 数据集</h2>
+      <ul id="dataset-list" class="dataset-list"><li class="empty">还没有数据，先上传一个文件</li></ul>
+    </section>
+
+    <section id="dataset-card" hidden>
+      <h2>3 · 数据画像</h2>
+      <div class="metrics" id="dataset-metrics"></div>
+      <div id="dataset-warnings" class="warnings"></div>
+      <div class="btn-row">
+        <button class="ghost" id="btn-preview">预览数据</button>
+        <button class="ghost" id="btn-refresh-profile">刷新画像</button>
+        <button class="ghost danger" id="btn-reset-data">恢复原始数据</button>
+      </div>
+      <details class="fold">
+        <summary>字段清单与类型</summary>
+        <div id="column-table" class="table-wrap"></div>
+      </details>
+      <details class="fold">
+        <summary>数据质量问题</summary>
+        <div id="quality-issues" class="issues"></div>
+      </details>
+    </section>
+  </aside>
+
+  <!-- ------------------------------ 右侧：对话 ------------------------------ -->
+  <section class="panel chat">
+    <div class="chat-head">
+      <h2>分析对话</h2>
+      <div class="quick" id="quick-actions">
+        <button data-prompt="先看一下这个数据集整体情况，有哪些字段、质量如何">数据概览</button>
+        <button data-prompt="检测一下缺失值情况，并给出清洗建议">缺失值检测</button>
+        <button data-prompt="各地区的销售额对比，用柱状图展示">地区销售对比</button>
+        <button data-prompt="分析各数值字段之间的相关性，画出热力图">相关性热力图</button>
+        <button data-prompt="分析销售额随时间的变化趋势，画折线图">销售趋势</button>
+      </div>
+    </div>
+
+    <div id="messages" class="messages">
+      <div class="welcome">
+        <h3>👋 开始你的第一个分析</h3>
+        <p>上传 CSV / Excel 后，用自然语言提问即可。Agent 会自主决定调用哪些工具：
+           数据画像、缺失值检测、数据清洗、统计计算、相关性分析、图表可视化，最后输出结构化报告。</p>
+        <p class="small">所有轮次的上下文通过 LangGraph Checkpoint 持久化在本地 SQLite 中，刷新页面或重启服务都不会丢。</p>
+      </div>
+    </div>
+
+    <div class="composer">
+      <textarea id="input" rows="2" placeholder="例如：按地区和商品类别分组，看销售额排名，并画一张柱状图"></textarea>
+      <div class="composer-actions">
+        <span id="composer-hint" class="small">Enter 发送 · Shift+Enter 换行</span>
+        <div>
+          <button class="ghost" id="btn-report">生成完整报告</button>
+          <button class="primary" id="btn-send">发送</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- 预览抽屉 -->
+<div class="modal" id="modal-preview" hidden>
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h3>数据预览（当前工作副本）</h3>
+      <button class="ghost" data-close="modal-preview">关闭</button>
+    </div>
+    <div id="preview-body" class="table-wrap tall"></div>
+  </div>
+</div>
+
+<!-- 报告抽屉 -->
+<div class="modal" id="modal-report" hidden>
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h3 id="report-title">分析报告</h3>
+      <div>
+        <a class="ghost" id="report-download" href="#" target="_blank">下载 HTML</a>
+        <button class="ghost" data-close="modal-report">关闭</button>
+      </div>
+    </div>
+    <iframe id="report-frame" title="分析报告"></iframe>
+  </div>
+</div>
+
+<!-- 工具清单 -->
+<div class="modal" id="modal-tools" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>Agent 可调用的工具</h3>
+      <button class="ghost" data-close="modal-tools">关闭</button>
+    </div>
+    <div id="tools-body" class="tools-body"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

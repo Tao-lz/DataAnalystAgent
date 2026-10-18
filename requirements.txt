@@ -1,0 +1,30 @@
+# ---- 运行时依赖 ----
+# Agent 工作流
+langgraph>=0.6,<2
+langchain>=0.3,<2
+langchain-core>=0.3,<2
+langchain-openai>=0.2,<2
+
+# 数据处理
+pandas>=2.2
+numpy>=1.26
+openpyxl>=3.1
+charset-normalizer>=3.3
+
+# 可视化
+matplotlib>=3.9
+seaborn>=0.13
+
+# 服务层
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
+
+# 可选：读取老式 .xls 文件（不装则仅支持 .csv/.xlsx）
+# xlrd>=2.0
+
+# 测试用（tests/test_api.py 依赖 starlette 的 TestClient）
+httpx>=0.27
