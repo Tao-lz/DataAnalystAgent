@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>数据分析 Agent 控制台</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v=20261025b">
 </head>
 <body>
 <header class="topbar">
@@ -12,7 +12,7 @@
     <span class="logo">DA</span>
     <div>
       <h1>数据分析 Agent 控制台</h1>
-      <p id="subtitle">LangGraph · Tool Calling · Pandas · Matplotlib</p>
+      <p id="subtitle">LangGraph · Tool Calling · Pandas · Matplotlib · UI 2026-10-25b</p>
     </div>
   </div>
   <div class="topbar-actions">
@@ -64,7 +64,15 @@
   <!-- ------------------------------ 右侧：对话 ------------------------------ -->
   <section class="panel chat">
     <div class="chat-head">
-      <h2>分析对话</h2>
+      <div class="chat-head-row">
+        <h2>分析对话</h2>
+        <div class="conv-bar">
+          <span class="small" id="conv-count">历史会话</span>
+          <select id="conv-select" class="conv-select" title="切换历史会话">
+            <option value="">新会话（尚未开始）</option>
+          </select>
+        </div>
+      </div>
       <div class="quick" id="quick-actions">
         <button data-prompt="先看一下这个数据集整体情况，有哪些字段、质量如何">数据概览</button>
         <button data-prompt="检测一下缺失值情况，并给出清洗建议">缺失值检测</button>
@@ -132,6 +140,6 @@
   </div>
 </div>
 
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=20261025b"></script>
 </body>
 </html>

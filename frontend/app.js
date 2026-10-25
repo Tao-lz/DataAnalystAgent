@@ -227,22 +227,96 @@ async function resetData() {
 }
 
 /* ----------------------------- 会话 ----------------------------- */
-async function attachLatestConversation(datasetId) {
-  clearMessages();
+/* ----------------------------- 会话切换 ----------------------------- */
+let convList = [];
+
+async function loadConversations(datasetId) {
   try {
     const data = await api(`/api/chat/conversations?dataset_id=${encodeURIComponent(datasetId)}`);
-    const first = (data.items || [])[0];
-    if (!first) return;
-    state.conversationId = first.id;
-    const history = await api(`/api/chat/history/${encodeURIComponent(first.id)}`);
-    (history.messages || []).forEach((m) => {
+    convList = data.items || [];
+  } catch (err) {
+    convList = [];
+  }
+  renderConvSelect();
+  return convList;
+}
+
+function renderConvSelect() {
+  const sel = $('conv-select');
+  const count = $('conv-count');
+  if (count) {
+    count.textContent = convList.length ? `历史会话 · ${convList.length}` : '历史会话';
+  }
+  if (!sel) return;
+  sel.innerHTML = '';
+
+  // 始终保留"新会话"这一项，保证还没开始聊时下拉框也有内容可显示
+  const fresh = document.createElement('option');
+  fresh.value = '';
+  fresh.textContent = convList.length ? '＋ 新会话（尚未开始）' : '新会话（尚未开始）';
+  sel.appendChild(fresh);
+
+  convList.forEach((c) => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    const when = (c.updated_at || '').slice(5, 16);
+    const title = (c.title || `会话 ${c.id.slice(1, 7)}`).slice(0, 18);
+    opt.textContent = `${title} · ${c.turns || 0} 轮${when ? ' · ' + when : ''}`;
+    sel.appendChild(opt);
+  });
+  sel.value = state.conversationId || '';
+
+  // 兜底：当前会话 id 不在列表里时补一个选项，避免 select 变成空白
+  if (sel.value !== (state.conversationId || '')) {
+    const cur = document.createElement('option');
+    cur.value = state.conversationId;
+    cur.textContent = `当前会话 ${state.conversationId.slice(1, 7)}`;
+    sel.appendChild(cur);
+    sel.value = state.conversationId;
+  }
+}
+
+async function switchConversation(id) {
+  state.conversationId = id || null;
+  clearMessages();
+  renderConvSelect();
+  if (!id) {
+    addMessage(
+      'system',
+      '<span class="small">已开启新会话。旧会话仍保留在上方「历史会话」列表里，随时可以切回去。</span>',
+    );
+    return;
+  }
+  try {
+    const history = await api(`/api/chat/history/${encodeURIComponent(id)}`);
+    const messages = history.messages || [];
+    messages.forEach((m) => {
       if (m.role === 'user') addMessage('user', escapeHtml(m.content));
       else if (m.role === 'assistant' && m.content) addMessage('assistant', renderMarkdown(m.content));
     });
-    if ((history.messages || []).length) {
-      addMessage('system', `<span class="small">已从本地 Checkpoint 恢复该数据集最近的会话（${history.messages.length} 条消息）</span>`);
-    }
-  } catch (err) { /* 历史不是关键路径，忽略 */ }
+    const visible = messages.filter(
+      (m) => m.role === 'user' || (m.role === 'assistant' && m.content),
+    ).length;
+    addMessage(
+      'system',
+      visible
+        ? `<span class="small">已加载历史会话：${visible} 条消息</span>`
+        : '<span class="small">这个会话还没有消息。</span>',
+    );
+  } catch (err) {
+    addMessage('system', `<span class="small">历史加载失败：${escapeHtml(err.message)}</span>`);
+  }
+}
+
+async function attachLatestConversation(datasetId) {
+  clearMessages();
+  const list = await loadConversations(datasetId);
+  if (!list.length) {
+    state.conversationId = null;
+    renderConvSelect();
+    return;
+  }
+  await switchConversation(list[0].id);
 }
 
 function clearMessages() {
@@ -377,6 +451,7 @@ async function sendMessage(message) {
     shell.status.remove();
     if (final) {
       state.conversationId = final.conversation_id;
+      await loadConversations(state.currentId);
       shell.answer.innerHTML = renderMarkdown(final.answer || '（没有返回内容）');
       renderArtifacts(shell, final.artifacts);
       const role = shell.root.querySelector('.role');
@@ -418,6 +493,7 @@ async function generateReport() {
       body: JSON.stringify({ dataset_id: state.currentId, conversation_id: state.conversationId }),
     });
     state.conversationId = data.conversation_id;
+    await loadConversations(state.currentId);
     shell.status.remove();
     shell.answer.innerHTML = renderMarkdown(data.answer || '报告已生成');
     renderArtifacts(shell, data.artifacts);
@@ -497,11 +573,10 @@ function bindEvents() {
   $('btn-send').onclick = () => { const v = $('input').value; $('input').value = ''; sendMessage(v); };
   $('btn-report').onclick = generateReport;
   $('btn-tools').onclick = showTools;
-  $('btn-reset-conv').onclick = () => {
-    state.conversationId = null;
-    clearMessages();
-    addMessage('system', '<span class="small">已开启新会话，旧会话仍保存在本地 Checkpoint 中。</span>');
-  };
+  const resetBtn = $('btn-reset-conv');
+  if (resetBtn) resetBtn.onclick = () => switchConversation(null);
+  const convSel = $('conv-select');
+  if (convSel) convSel.onchange = (e) => switchConversation(e.target.value);
 
   $('input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -525,7 +600,13 @@ function bindEvents() {
 
 /* ----------------------------- 启动 ----------------------------- */
 (async function init() {
-  bindEvents();
+  try {
+    bindEvents();
+  } catch (err) {
+    // 某个控件缺失时不要让整页初始化挂掉
+    console.error('事件绑定失败：', err);
+  }
+  renderConvSelect();
   await checkHealth();
   await loadDatasets();
   if (state.datasets.length) await selectDataset(state.datasets[0].id);

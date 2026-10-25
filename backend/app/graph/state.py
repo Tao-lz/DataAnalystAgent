@@ -17,7 +17,7 @@ Intent = str  # chat | overview | cleaning | statistics | visualization | report
 
 VALID_INTENTS = ("chat", "overview", "cleaning", "statistics", "visualization", "report")
 
-
+# Agent调用外部工具后，把调用的记录存在这里，作为推理证据
 class Evidence(TypedDict, total=False):
     """一条工具执行留下的证据。"""
 
@@ -26,7 +26,7 @@ class Evidence(TypedDict, total=False):
     data: Any
     run_id: str
 
-
+# Agent生成图表、表格这些可视化输出时就用Artifact封装
 class Artifact(TypedDict, total=False):
     """一个图表产物。"""
 
@@ -36,7 +36,7 @@ class Artifact(TypedDict, total=False):
     description: str
     url: str
 
-
+# LangGraph 的图节点之间传递的**全局上下文**，整个 Agent 流程共享这份状态。
 class AgentState(TypedDict, total=False):
     """LangGraph 状态。"""
 

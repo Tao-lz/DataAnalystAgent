@@ -170,6 +170,22 @@ th { background: #26314a; position: sticky; top: 0; }
   overflow: hidden;
 }
 .chat-head { padding: 16px 20px 12px; border-bottom: 1px solid var(--line); }
+
+/* 历史会话切换栏 */
+.chat-head-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.conv-bar { display: flex; align-items: center; gap: 8px; }
+.conv-select {
+  max-width: 360px; min-width: 180px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--text); font: inherit; font-size: 12.5px;
+  padding: 5px 9px; cursor: pointer;
+}
+.conv-select:hover { border-color: var(--accent); }
+.conv-select:focus { outline: none; border-color: var(--accent); }
+.conv-select:disabled { opacity: .6; cursor: default; }
 .quick { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 .quick button { font-size: 12px; padding: 5px 10px; border-radius: 999px; border-color: var(--line); background: transparent; color: var(--text-dim); }
 .quick button:hover { color: var(--text); }

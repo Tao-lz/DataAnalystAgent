@@ -224,12 +224,17 @@ class Store:
         return self._query_one("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
 
     def list_conversations(self, dataset_id: str | None = None) -> list[dict[str, Any]]:
+        # 同一秒内创建的两个会话时间戳相同，SQLite 的排序会变得不确定；
+        # 追加 rowid 作为第二排序键，保证"后建的排前面"。
         if dataset_id:
             return self._query(
-                "SELECT * FROM conversations WHERE dataset_id = ? ORDER BY updated_at DESC",
+                "SELECT * FROM conversations WHERE dataset_id = ?"
+                " ORDER BY updated_at DESC, rowid DESC",
                 (dataset_id,),
             )
-        return self._query("SELECT * FROM conversations ORDER BY updated_at DESC")
+        return self._query(
+            "SELECT * FROM conversations ORDER BY updated_at DESC, rowid DESC"
+        )
 
     def delete_conversation(self, conversation_id: str) -> None:
         self._exec("DELETE FROM conversations WHERE id = ?", (conversation_id,))

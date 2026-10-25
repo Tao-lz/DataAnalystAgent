@@ -27,6 +27,17 @@ def new_conversation_id() -> str:
     return f"C{uuid.uuid4().hex[:12]}"
 
 
+def _clean_title(text: str | None, limit: int = 24) -> str | None:
+    """用首条提问给会话起个标题，方便在「历史会话」下拉框里辨认。"""
+
+    if not text:
+        return None
+    compact = " ".join(str(text).split())
+    if not compact:
+        return None
+    return compact[:limit] + ("…" if len(compact) > limit else "")
+
+
 def _config(conversation_id: str) -> dict[str, Any]:
     return {
         "configurable": {"thread_id": conversation_id},
@@ -34,14 +45,19 @@ def _config(conversation_id: str) -> dict[str, Any]:
     }
 
 
-def prepare_context(dataset_id: str, conversation_id: str | None) -> tuple[ToolContext, str]:
+def prepare_context(
+    dataset_id: str,
+    conversation_id: str | None,
+    title: str | None = None,
+) -> tuple[ToolContext, str]:
     """建立或复用会话，返回绑定了数据集与线程 id 的上下文。"""
 
     store = get_store()
     if not store.get_dataset(dataset_id):
         raise ValueError(f"数据集 {dataset_id} 不存在，请先上传文件。")
     conv_id = conversation_id or new_conversation_id()
-    store.ensure_conversation(conv_id, dataset_id)
+    # 标题只在首次建会话时写入（ON CONFLICT 不会覆盖），后续消息不会改写它
+    store.ensure_conversation(conv_id, dataset_id, _clean_title(title))
     return ToolContext(dataset_id=dataset_id, conversation_id=conv_id), conv_id
 
 
@@ -65,7 +81,7 @@ def _response(state: dict[str, Any], ctx: ToolContext, conversation_id: str) -> 
 def run_agent(dataset_id: str, message: str, conversation_id: str | None = None) -> dict[str, Any]:
     """执行一轮完整分析，返回最终答复与证据。"""
 
-    ctx, conv_id = prepare_context(dataset_id, conversation_id)
+    ctx, conv_id = prepare_context(dataset_id, conversation_id, title=message)
     store = get_store()
     token = set_context(ctx)
     try:
@@ -146,7 +162,7 @@ def stream_agent(
     生成器开头的 ``set_context`` 会失效。所以这里每恢复一次就重新绑定一次上下文。
     """
 
-    ctx, conv_id = prepare_context(dataset_id, conversation_id)
+    ctx, conv_id = prepare_context(dataset_id, conversation_id, title=message)
     store = get_store()
     final_state: dict[str, Any] = {}
     token = set_context(ctx)

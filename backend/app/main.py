@@ -62,7 +62,12 @@ def index():
     """返回内置的极简前端页面。"""
 
     if FRONTEND_INDEX.exists():
-        return FileResponse(FRONTEND_INDEX, media_type="text/html")
+        # 页面本身每次都向服务端确认，避免改了前端却还在用旧缓存
+        return FileResponse(
+            FRONTEND_INDEX,
+            media_type="text/html",
+            headers={"Cache-Control": "no-cache, must-revalidate"},
+        )
     return JSONResponse(
         {
             "message": f"{settings.APP_NAME} 已启动，但未找到 frontend/index.html。",
