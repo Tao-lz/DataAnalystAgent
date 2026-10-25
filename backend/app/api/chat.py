@@ -12,10 +12,11 @@ from ..core.store import get_store
 from ..graph.runner import (
     conversation_history,
     delete_conversation,
+    rename_conversation,
     run_agent,
     stream_agent,
 )
-from ..schemas import ChatRequest
+from ..schemas import ChatRequest, ConversationRenameRequest
 
 router = APIRouter()
 
@@ -78,9 +79,21 @@ def list_conversations(
     return {"items": get_store().list_conversations(dataset_id)}
 
 
-@router.delete("/conversations/{conversation_id}", response_model=None)
-def remove_conversation(conversation_id: str) -> dict[str, str]:
-    """删除会话：同时清掉 checkpoint 与元数据。"""
+@router.patch("/conversations/{conversation_id}", response_model=None)
+def rename(conversation_id: str, payload: ConversationRenameRequest) -> dict[str, Any]:
+    """重命名会话。"""
 
-    delete_conversation(conversation_id)
-    return {"status": "deleted", "conversation_id": conversation_id}
+    try:
+        row = rename_conversation(conversation_id, payload.title)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"会话 {conversation_id} 不存在。") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "renamed", "conversation": row}
+
+
+@router.delete("/conversations/{conversation_id}", response_model=None)
+def remove_conversation(conversation_id: str) -> dict[str, Any]:
+    """删除会话：清掉 checkpoint、会话记录，以及该会话产出的报告与图表。"""
+
+    return {"status": "deleted", **delete_conversation(conversation_id)}

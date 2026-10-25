@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import uuid
+from pathlib import Path
 from typing import Any, Iterator
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
+from ..config import get_settings
 from ..core.store import get_store, now_iso
 from ..tools.context import ToolContext, reset_context, set_context
 from .builder import get_graph
@@ -234,9 +236,56 @@ def conversation_history(conversation_id: str) -> list[dict[str, Any]]:
     return history
 
 
-def delete_conversation(conversation_id: str) -> None:
+def rename_conversation(conversation_id: str, title: str) -> dict[str, Any]:
+    """重命名会话；不存在时抛 KeyError，标题为空时抛 ValueError。"""
+
+    clean = " ".join(str(title).split())[:60]
+    if not clean:
+        raise ValueError("会话标题不能为空。")
+    store = get_store()
+    if not store.get_conversation(conversation_id):
+        raise KeyError(conversation_id)
+    store.rename_conversation(conversation_id, clean)
+    return store.get_conversation(conversation_id) or {}
+
+
+def _safe_unlink(path_like: str | None) -> bool:
+    """只允许删除 storage/artifacts 与 storage/reports 下的文件，防止路径穿越。"""
+
+    if not path_like:
+        return False
+    try:
+        target = Path(path_like).resolve()
+    except OSError:
+        return False
+    settings = get_settings()
+    roots = [settings.artifact_path.resolve(), settings.report_path.resolve()]
+    if not any(target == root or root in target.parents for root in roots):
+        return False
+    try:
+        if target.is_file():
+            target.unlink()
+            return True
+    except OSError:
+        pass
+    return False
+
+
+def delete_conversation(conversation_id: str) -> dict[str, Any]:
+    """删除会话：checkpoint + 会话记录 + 该会话产出的报告与图表。"""
+
+    store = get_store()
+    existed = store.get_conversation(conversation_id) is not None
     get_graph().checkpointer.delete_thread(conversation_id)
-    get_store().delete_conversation(conversation_id)
+    purged = store.purge_conversation(conversation_id)
+    removed = sum(1 for path in purged["files"] if _safe_unlink(path))
+    return {
+        "conversation_id": conversation_id,
+        "deleted": existed,
+        "artifacts": purged["artifacts"],
+        "reports": purged["reports"],
+        "files": removed,
+    }
 
 
 def checkpoint_stats() -> dict[str, Any]:

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>数据分析 Agent 控制台</title>
-<link rel="stylesheet" href="/static/style.css?v=20261025b">
+<link rel="stylesheet" href="/static/style.css?v=20261025c">
 </head>
 <body>
 <header class="topbar">
@@ -12,7 +12,7 @@
     <span class="logo">DA</span>
     <div>
       <h1>数据分析 Agent 控制台</h1>
-      <p id="subtitle">LangGraph · Tool Calling · Pandas · Matplotlib · UI 2026-10-25b</p>
+      <p id="subtitle">LangGraph · Tool Calling · Pandas · Matplotlib · UI 2026-10-25c</p>
     </div>
   </div>
   <div class="topbar-actions">
@@ -71,6 +71,8 @@
           <select id="conv-select" class="conv-select" title="切换历史会话">
             <option value="">新会话（尚未开始）</option>
           </select>
+          <button class="ghost mini" id="btn-rename-conv" title="重命名当前会话" disabled>重命名</button>
+          <button class="ghost mini danger" id="btn-delete-conv" title="删除当前会话" disabled>删除</button>
         </div>
       </div>
       <div class="quick" id="quick-actions">
@@ -140,6 +142,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=20261025b"></script>
+<script src="/static/app.js?v=20261025c"></script>
 </body>
 </html>

@@ -265,6 +265,7 @@ function renderConvSelect() {
     sel.appendChild(opt);
   });
   sel.value = state.conversationId || '';
+  updateConvButtons();
 
   // 兜底：当前会话 id 不在列表里时补一个选项，避免 select 变成空白
   if (sel.value !== (state.conversationId || '')) {
@@ -305,6 +306,59 @@ async function switchConversation(id) {
     );
   } catch (err) {
     addMessage('system', `<span class="small">历史加载失败：${escapeHtml(err.message)}</span>`);
+  }
+}
+
+function updateConvButtons() {
+  const disabled = !state.conversationId;
+  const renameBtn = $('btn-rename-conv');
+  const deleteBtn = $('btn-delete-conv');
+  if (renameBtn) renameBtn.disabled = disabled;
+  if (deleteBtn) deleteBtn.disabled = disabled;
+}
+
+async function renameCurrentConversation() {
+  if (!state.conversationId) return;
+  const row = convList.find((c) => c.id === state.conversationId);
+  const current = (row && row.title) || '';
+  const input = prompt('给这个会话起个名字（1-60 字）', current);
+  if (input === null) return;
+  const title = input.trim();
+  if (!title) {
+    alert('标题不能为空。');
+    return;
+  }
+  try {
+    await api(`/api/chat/conversations/${encodeURIComponent(state.conversationId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
+    await loadConversations(state.currentId);
+  } catch (err) {
+    alert(`重命名失败：${err.message}`);
+  }
+}
+
+async function deleteCurrentConversation() {
+  if (!state.conversationId) return;
+  const id = state.conversationId;
+  const row = convList.find((c) => c.id === id);
+  const name = (row && row.title) || `会话 ${id.slice(1, 7)}`;
+  if (!confirm(`确定删除「${name}」吗？\n\n会同时删除该会话的聊天记录、生成的报告和图表，且不可恢复。`)) {
+    return;
+  }
+  try {
+    const res = await api(`/api/chat/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const list = await loadConversations(state.currentId);
+    if (list.length) await switchConversation(list[0].id);
+    else await switchConversation(null);
+    addMessage(
+      'system',
+      `<span class="small">已删除「${escapeHtml(name)}」：图表 ${res.artifacts || 0} 个、报告 ${res.reports || 0} 份。</span>`,
+    );
+  } catch (err) {
+    alert(`删除失败：${err.message}`);
   }
 }
 
@@ -577,6 +631,10 @@ function bindEvents() {
   if (resetBtn) resetBtn.onclick = () => switchConversation(null);
   const convSel = $('conv-select');
   if (convSel) convSel.onchange = (e) => switchConversation(e.target.value);
+  const renameBtn = $('btn-rename-conv');
+  if (renameBtn) renameBtn.onclick = renameCurrentConversation;
+  const deleteBtn = $('btn-delete-conv');
+  if (deleteBtn) deleteBtn.onclick = deleteCurrentConversation;
 
   $('input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {

@@ -223,6 +223,46 @@ class Store:
     def get_conversation(self, conversation_id: str) -> dict[str, Any] | None:
         return self._query_one("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
 
+    def rename_conversation(self, conversation_id: str, title: str) -> bool:
+        """改会话标题，返回是否命中记录。"""
+
+        with self._lock, self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?",
+                (title, now_iso(), conversation_id),
+            )
+            return cur.rowcount > 0
+
+    def purge_conversation(self, conversation_id: str) -> dict[str, Any]:
+        """删除会话及其报告、图表记录，返回待清理的文件路径。
+
+        文件本身交给调用方在确认路径安全后删除。
+        """
+
+        with self._lock, self._connect() as conn:
+            artifacts = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT id, file_path FROM artifacts WHERE conversation_id = ?",
+                    (conversation_id,),
+                )
+            ]
+            reports = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT id, markdown_path, html_path FROM reports WHERE conversation_id = ?",
+                    (conversation_id,),
+                )
+            ]
+            conn.execute("DELETE FROM artifacts WHERE conversation_id = ?", (conversation_id,))
+            conn.execute("DELETE FROM reports WHERE conversation_id = ?", (conversation_id,))
+            conn.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
+
+        files: list[str] = [r["file_path"] for r in artifacts if r.get("file_path")]
+        for r in reports:
+            files.extend(p for p in (r.get("markdown_path"), r.get("html_path")) if p)
+        return {"artifacts": len(artifacts), "reports": len(reports), "files": files}
+
     def list_conversations(self, dataset_id: str | None = None) -> list[dict[str, Any]]:
         # 同一秒内创建的两个会话时间戳相同，SQLite 的排序会变得不确定；
         # 追加 rowid 作为第二排序键，保证"后建的排前面"。

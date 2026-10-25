@@ -68,6 +68,10 @@ class ConversationInfo(BaseModel):
     updated_at: str | None = None
 
 
+class ConversationRenameRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=60, description="新的会话标题")
+
+
 class ReportRequest(BaseModel):
     dataset_id: str
     conversation_id: str | None = None

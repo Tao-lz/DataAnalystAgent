@@ -186,6 +186,7 @@ th { background: #26314a; position: sticky; top: 0; }
 .conv-select:hover { border-color: var(--accent); }
 .conv-select:focus { outline: none; border-color: var(--accent); }
 .conv-select:disabled { opacity: .6; cursor: default; }
+button.mini { padding: 4px 9px; font-size: 12px; border-radius: 7px; }
 .quick { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 .quick button { font-size: 12px; padding: 5px 10px; border-radius: 999px; border-color: var(--line); background: transparent; color: var(--text-dim); }
 .quick button:hover { color: var(--text); }
