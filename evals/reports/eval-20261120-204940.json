@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "time": "2026-11-20 20:49:40",
+    "model": "deepseek-chat",
+    "dataset": "电商订单_示例数据.csv",
+    "repeat": 1,
+    "storage": "C:\\Users\\李自涛\\Desktop\\code\\DataAnalysisAgent\\evals\\.storage"
+  },
+  "summary": {
+    "cases": 1,
+    "pass_rate": 1,
+    "intent_accuracy": 1,
+    "tool_recall": 1.0,
+    "tool_precision": 1.0,
+    "args_accuracy": null,
+    "number_hit_rate": null,
+    "avg_rounds": 0,
+    "avg_latency": 5.94,
+    "avg_tokens": 1038,
+    "max_tool_calls": 0
+  },
+  "results": [
+    {
+      "case": {
+        "id": "chat-01",
+        "tag": "chat",
+        "question": "你好，你能帮我做什么？",
+        "intents": [
+          "chat"
+        ],
+        "required_tools": [],
+        "no_tools": true,
+        "numbers": []
+      },
+      "run": {
+        "conversation_id": "Cf83dcfc97962",
+        "intent": "chat",
+        "answer": "你好！我是你的数据分析助手，当前已加载数据集「评测样本_电商订单」（618 行 × 16 列，包含订单号、订单日期、客户等级、地区、销售渠道、商品类别、数量、单价、折扣率、销售额、是否退货、满意度评分等字段）。\n\n我可以帮你做这些事：\n\n- **数据画像与质量体检**：查看各字段分布、类型、唯一值，识别异常\n- **缺失值检测与数据清洗**：比如「客户等级」缺 19 条、「地区」缺 12 条、「满意度评分」缺 18 条、「备注」缺 463 条，还有「数据来源系统」整列为空，可以一起处理\n- **统计计算与分组对比**：按地区/渠道/商品类别等分组看销售额、退货率、满意度\n- **相关性分析**：如折扣率与销售额、满意度与退货的关系\n- **可视化**：折线图、柱状图、直方图、热力图、散点图、箱线图\n- **生成结构化分析报告**\n\n你想从哪方面开始？比如「看看各地区的销售表现」或「先做一次数据质量体检」都可以。",
+        "tool_calls": [],
+        "rounded_rounds": 0,
+        "report_id": null,
+        "latency": 5.94,
+        "tokens": 1038,
+        "status": "answered"
+      },
+      "runs": [
+        {
+          "conversation_id": "Cf83dcfc97962",
+          "intent": "chat",
+          "answer": "你好！我是你的数据分析助手，当前已加载数据集「评测样本_电商订单」（618 行 × 16 列，包含订单号、订单日期、客户等级、地区、销售渠道、商品类别、数量、单价、折扣率、销售额、是否退货、满意度评分等字段）。\n\n我可以帮你做这些事：\n\n- **数据画像与质量体检**：查看各字段分布、类型、唯一值，识别异常\n- **缺失值检测与数据清洗**：比如「客户等级」缺 19 条、「地区」缺 12 条、「满意度评分」缺 18 条、「备注」缺 463 条，还有「数据来源系统」整列为空，可以一起处理\n- **统计计算与分组对比**：按地区/渠道/商品类别等分组看销售额、退货率、满意度\n- **相关性分析**：如折扣率与销售额、满意度与退货的关系\n- **可视化**：折线图、柱状图、直方图、热力图、散点图、箱线图\n- **生成结构化分析报告**\n\n你想从哪方面开始？比如「看看各地区的销售表现」或「先做一次数据质量体检」都可以。",
+          "tool_calls": [],
+          "rounded_rounds": 0,
+          "report_id": null,
+          "latency": 5.94,
+          "tokens": 1038,
+          "status": "answered"
+        }
+      ],
+      "score": {
+        "tool_recall": 1.0,
+        "tool_precision": 1.0,
+        "passed": true,
+        "intent_ok": true,
+        "args_ok": true,
+        "numbers_ok": true,
+        "keywords_ok": true,
+        "report_ok": true,
+        "no_tools_ok": true,
+        "number_detail": [],
+        "missing_tools": [],
+        "called_tools": []
+      },
+      "pass_count": 1
+    }
+  ]
+}

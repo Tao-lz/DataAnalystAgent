@@ -1,0 +1,127 @@
+{
+  "meta": {
+    "time": "2026-11-20 20:31:30",
+    "model": "deepseek-chat",
+    "dataset": "电商订单_示例数据.csv",
+    "repeat": 1,
+    "storage": "C:\\Users\\李自涛\\Desktop\\code\\DataAnalysisAgent\\evals\\.storage"
+  },
+  "summary": {
+    "cases": 2,
+    "pass_rate": 1,
+    "intent_accuracy": 1,
+    "tool_recall": 1.0,
+    "tool_precision": 1.0,
+    "args_accuracy": null,
+    "number_hit_rate": null,
+    "avg_rounds": 0,
+    "avg_latency": 3.79,
+    "avg_tokens": 1012
+  },
+  "results": [
+    {
+      "case": {
+        "id": "chat-01",
+        "tag": "chat",
+        "question": "你好，你能帮我做什么？",
+        "intents": [
+          "chat"
+        ],
+        "required_tools": [],
+        "no_tools": true,
+        "numbers": []
+      },
+      "run": {
+        "conversation_id": "C4b6b2b815678",
+        "intent": "chat",
+        "answer": "你好！我是你的数据分析助手，当前已加载「评测样本_电商订单」数据集（618 行 × 16 列，涵盖订单号、订单日期、客户等级、地区、销售渠道、商品类别、销售额、是否退货、满意度评分等字段）。\n\n我可以帮你做这些事：\n\n- **数据画像与质量体检**：查看字段类型、取值范围、唯一值，快速了解数据全貌\n- **缺失值检测与数据清洗**：比如「客户等级」缺 19 条、「地区」缺 12 条、「满意度评分」缺 18 条、「备注」缺 463 条，还有一列「数据来源系统」全空，可以帮你评估并处理\n- **统计计算与分组对比**：按地区/渠道/商品类别等分组看销售额、退货率、满意度\n- **相关性分析**：比如折扣率与销售额、满意度与退货之间的关系\n- **可视化**：折线图、柱状图、直方图、热力图、散点图、箱线图\n- **生成结构化分析报告**\n\n你想从哪方面入手？比如「各渠道销售额对比」「退货情况分析」或「先做一次数据质量体检」，告诉我就行。",
+        "tool_calls": [],
+        "rounded_rounds": 0,
+        "report_id": null,
+        "latency": 4.3,
+        "tokens": 1042,
+        "status": "answered"
+      },
+      "runs": [
+        {
+          "conversation_id": "C4b6b2b815678",
+          "intent": "chat",
+          "answer": "你好！我是你的数据分析助手，当前已加载「评测样本_电商订单」数据集（618 行 × 16 列，涵盖订单号、订单日期、客户等级、地区、销售渠道、商品类别、销售额、是否退货、满意度评分等字段）。\n\n我可以帮你做这些事：\n\n- **数据画像与质量体检**：查看字段类型、取值范围、唯一值，快速了解数据全貌\n- **缺失值检测与数据清洗**：比如「客户等级」缺 19 条、「地区」缺 12 条、「满意度评分」缺 18 条、「备注」缺 463 条，还有一列「数据来源系统」全空，可以帮你评估并处理\n- **统计计算与分组对比**：按地区/渠道/商品类别等分组看销售额、退货率、满意度\n- **相关性分析**：比如折扣率与销售额、满意度与退货之间的关系\n- **可视化**：折线图、柱状图、直方图、热力图、散点图、箱线图\n- **生成结构化分析报告**\n\n你想从哪方面入手？比如「各渠道销售额对比」「退货情况分析」或「先做一次数据质量体检」，告诉我就行。",
+          "tool_calls": [],
+          "rounded_rounds": 0,
+          "report_id": null,
+          "latency": 4.3,
+          "tokens": 1042,
+          "status": "answered"
+        }
+      ],
+      "score": {
+        "tool_recall": 1.0,
+        "tool_precision": 1.0,
+        "passed": true,
+        "intent_ok": true,
+        "args_ok": true,
+        "numbers_ok": true,
+        "keywords_ok": true,
+        "report_ok": true,
+        "no_tools_ok": true,
+        "number_detail": [],
+        "missing_tools": [],
+        "called_tools": []
+      },
+      "pass_count": 1
+    },
+    {
+      "case": {
+        "id": "chat-02",
+        "tag": "chat",
+        "question": "简单说说你都能分析哪些东西？",
+        "intents": [
+          "chat"
+        ],
+        "required_tools": [],
+        "no_tools": true,
+        "numbers": []
+      },
+      "run": {
+        "conversation_id": "C4de5592fddc7",
+        "intent": "chat",
+        "answer": "我可以帮你做这些分析（基于当前这份电商订单数据，618 行 × 16 列）：\n\n- **数据画像与质量体检**：字段类型、取值范围、唯一值、异常值概览\n- **缺失值检测与清洗建议**：比如「客户等级」「地区」「满意度评分」有少量缺失，「备注」缺失较多，「数据来源系统」整列为空\n- **统计计算与分组对比**：按地区、渠道、商品类别、客户等级等分组看销售额、数量、满意度等\n- **相关性分析**：如折扣率与销售额、满意度与退货等之间的关系\n- **可视化**：折线图、柱状图、直方图、热力图、散点图、箱线图\n- **结构化分析报告**：把关键发现整理成可读的报告\n\n你想先从哪块入手？比如“看看各渠道销售额对比”或“做个数据质量体检”都可以。",
+        "tool_calls": [],
+        "rounded_rounds": 0,
+        "report_id": null,
+        "latency": 3.28,
+        "tokens": 982,
+        "status": "answered"
+      },
+      "runs": [
+        {
+          "conversation_id": "C4de5592fddc7",
+          "intent": "chat",
+          "answer": "我可以帮你做这些分析（基于当前这份电商订单数据，618 行 × 16 列）：\n\n- **数据画像与质量体检**：字段类型、取值范围、唯一值、异常值概览\n- **缺失值检测与清洗建议**：比如「客户等级」「地区」「满意度评分」有少量缺失，「备注」缺失较多，「数据来源系统」整列为空\n- **统计计算与分组对比**：按地区、渠道、商品类别、客户等级等分组看销售额、数量、满意度等\n- **相关性分析**：如折扣率与销售额、满意度与退货等之间的关系\n- **可视化**：折线图、柱状图、直方图、热力图、散点图、箱线图\n- **结构化分析报告**：把关键发现整理成可读的报告\n\n你想先从哪块入手？比如“看看各渠道销售额对比”或“做个数据质量体检”都可以。",
+          "tool_calls": [],
+          "rounded_rounds": 0,
+          "report_id": null,
+          "latency": 3.28,
+          "tokens": 982,
+          "status": "answered"
+        }
+      ],
+      "score": {
+        "tool_recall": 1.0,
+        "tool_precision": 1.0,
+        "passed": true,
+        "intent_ok": true,
+        "args_ok": true,
+        "numbers_ok": true,
+        "keywords_ok": true,
+        "report_ok": true,
+        "no_tools_ok": true,
+        "number_detail": [],
+        "missing_tools": [],
+        "called_tools": []
+      },
+      "pass_count": 1
+    }
+  ]
+}

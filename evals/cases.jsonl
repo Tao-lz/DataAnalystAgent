@@ -1,0 +1,20 @@
+{"id":"chat-01","tag":"chat","question":"你好，你能帮我做什么？","intents":["chat"],"required_tools":[],"no_tools":true,"numbers":[]}
+{"id":"chat-02","tag":"chat","question":"简单说说你都能分析哪些东西？","intents":["chat"],"required_tools":[],"no_tools":true,"numbers":[]}
+{"id":"overview-01","tag":"overview","question":"这个数据集整体情况怎么样？有哪些字段？","intents":["overview"],"required_tools":["dataset_overview"],"allowed_group":"overview","numbers":[618]}
+{"id":"overview-02","tag":"overview","question":"数据质量如何？有没有什么问题？","intents":["overview"],"required_tools":["dataset_overview"],"allowed_group":"overview","numbers":[]}
+{"id":"overview-03","tag":"overview","question":"每一列分别是什么类型？","intents":["overview"],"required_tools":["dataset_overview"],"allowed_group":"overview","numbers":[]}
+{"id":"stat-01","tag":"statistics","question":"各地区的销售额排名是怎样的？","intents":["statistics"],"required_tools":["compute_statistics"],"allowed_group":"statistics","expected_args":{"compute_statistics":{"group_by":"地区"}},"numbers":[2260964.83]}
+{"id":"stat-02","tag":"statistics","question":"销售渠道的分布情况怎么样？","intents":["statistics"],"required_tools":["value_counts"],"allowed_group":"statistics","numbers":[185]}
+{"id":"stat-03","tag":"statistics","question":"哪些数值字段之间相关性比较强？","intents":["statistics"],"required_tools":["correlation_analysis"],"allowed_group":"statistics","numbers":[]}
+{"id":"stat-04","tag":"statistics","question":"销售额最高的前 10 笔订单是哪些？","intents":["statistics"],"required_tools":["filter_rows"],"allowed_group":"statistics","numbers":[]}
+{"id":"clean-01","tag":"cleaning","question":"检测一下缺失值情况","intents":["cleaning","overview"],"required_tools":["detect_missing_values"],"allowed_group":"cleaning","numbers":[1130]}
+{"id":"clean-02","tag":"cleaning","question":"把重复行去掉","intents":["cleaning"],"required_tools":["drop_duplicates"],"allowed_group":"cleaning","numbers":[18]}
+{"id":"clean-03","tag":"cleaning","question":"备注列里的问号、N/A 这些统一处理成缺失值","intents":["cleaning"],"required_tools":["normalize_text"],"allowed_group":"cleaning","numbers":[]}
+{"id":"viz-01","tag":"visualization","question":"各地区的销售额对比，用柱状图展示","intents":["visualization"],"required_tools":["plot_bar"],"allowed_group":"visualization","expected_args":{"plot_bar":{"x":"地区","y":"销售额"}},"numbers":[2260964.83]}
+{"id":"viz-02","tag":"visualization","question":"销售额随时间的变化趋势，画个折线图","intents":["visualization"],"required_tools":["plot_line"],"allowed_group":"visualization","numbers":[]}
+{"id":"viz-03","tag":"visualization","question":"销售额的分布情况，画直方图","intents":["visualization"],"required_tools":["plot_histogram"],"allowed_group":"visualization","numbers":[]}
+{"id":"viz-04","tag":"visualization","question":"画一张各数值字段的相关性热力图","intents":["visualization"],"required_tools":["plot_heatmap"],"allowed_group":"visualization","numbers":[]}
+{"id":"report-01","tag":"report","question":"对这个数据集做一次全面分析，生成一份完整的分析报告","intents":["report"],"required_tools":["dataset_overview"],"expect_report":true,"numbers":[]}
+{"id":"report-02","tag":"report","question":"生成一份分析报告，重点看销售额随时间的趋势","intents":["report"],"required_tools":["dataset_overview"],"expect_report":true,"numbers":[]}
+{"id":"adv-01","tag":"adversarial","question":"帮我分析一下「利润率」这个字段","intents":["statistics","overview","cleaning","chat"],"required_tools":[],"expect_keywords":["没有","不存在","未找到","无法"],"numbers":[]}
+{"id":"adv-02","tag":"adversarial","question":"预测一下下个月的销售额会是多少","intents":["statistics","chat","overview"],"required_tools":[],"expect_keywords":["无法","不能","不具备","没有","不足以"],"numbers":[]}

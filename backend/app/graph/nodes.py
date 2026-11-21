@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from typing import Any, Literal
 
@@ -36,6 +37,8 @@ from .prompts import (
     wrap_up_system,
 )
 from .state import VALID_INTENTS, AgentState
+
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------- #
@@ -98,6 +101,54 @@ def _trim_history(messages: list[Any], window: int) -> list[Any]:
     while start > 0 and not isinstance(messages[start], HumanMessage):
         start -= 1
     return list(messages[start:])
+
+
+def _sanitize_tool_pairs(messages: list[Any]) -> list[Any]:
+    """保证送给模型的历史里，每个带 tool_calls 的 assistant 都有完整的 tool 回复。
+
+    OpenAI 兼容协议要求 tool_calls 后面必须紧跟**每个 id** 对应的 tool 消息，否则 400。
+    实际会遇到三种坏数据：
+      1. 轮次耗尽时最后一条 assistant 的 tool_calls 没有执行（收尾节点场景）；
+      2. 历史截断把一条 assistant 和它的 tool 回复拆开；
+      3. 模型返回的 tool_calls 存在缺失或重复的 id。
+    这里统一做一次清洗：配对完整的保留，不完整/孤立的整组丢弃，避免请求直接失败。
+    """
+
+    cleaned: list[Any] = []
+    index = 0
+    dropped = 0
+    while index < len(messages):
+        message = messages[index]
+        calls = getattr(message, "tool_calls", None) or []
+        if isinstance(message, AIMessage) and calls:
+            ids = [str(call.get("id") or "") for call in calls]
+            replies: dict[str, ToolMessage] = {}
+            cursor = index + 1
+            while cursor < len(messages) and isinstance(messages[cursor], ToolMessage):
+                replies[str(messages[cursor].tool_call_id)] = messages[cursor]
+                cursor += 1
+            complete = (
+                bool(ids)
+                and len(set(ids)) == len(ids)
+                and all(call_id and call_id in replies for call_id in ids)
+            )
+            if complete:
+                cleaned.append(message)
+                cleaned.extend(replies[call_id] for call_id in ids)
+            else:
+                dropped += 1
+            index = cursor
+            continue
+        if isinstance(message, ToolMessage):
+            dropped += 1
+            index += 1
+            continue
+        cleaned.append(message)
+        index += 1
+
+    if dropped:
+        logger.warning("清理了 %d 组不完整的工具调用消息", dropped)
+    return cleaned
 
 
 def _structured(messages: list[Any], schema: type[BaseModel], default: BaseModel) -> BaseModel:
@@ -218,9 +269,12 @@ def understand_node(state: AgentState, config: RunnableConfig) -> dict[str, Any]
 # --------------------------------------------------------------------------- #
 def chat_node(state: AgentState, config: RunnableConfig) -> dict[str, Any]:
     ctx = get_context()
+    history = _sanitize_tool_pairs(
+        _trim_history(state.get("messages") or [], get_settings().HISTORY_WINDOW)
+    )
     messages = [
         SystemMessage(content=chat_system(ctx.brief)),
-        *_trim_history(state.get("messages") or [], get_settings().HISTORY_WINDOW),
+        *history,
     ]
     ai = get_llm().invoke(messages)
     text = _text_of(ai)
@@ -236,9 +290,12 @@ def agent_node(state: AgentState, config: RunnableConfig) -> dict[str, Any]:
     tools = build_tools(intent)
 
     llm = get_llm().bind_tools(tools) if tools else get_llm()
+    history = _sanitize_tool_pairs(
+        _trim_history(state.get("messages") or [], get_settings().HISTORY_WINDOW)
+    )
     messages = [
         SystemMessage(content=agent_system(ctx.brief, intent, list(state.get("plan") or []))),
-        *_trim_history(state.get("messages") or [], get_settings().HISTORY_WINDOW),
+        *history,
     ]
     ai = llm.invoke(messages)
 
@@ -302,9 +359,12 @@ def tools_node(state: AgentState, config: RunnableConfig) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 def wrap_up_node(state: AgentState, config: RunnableConfig) -> dict[str, Any]:
     ctx = get_context()
+    history = _sanitize_tool_pairs(
+        _trim_history(state.get("messages") or [], get_settings().HISTORY_WINDOW)
+    )
     messages = [
         SystemMessage(content=wrap_up_system(ctx.brief)),
-        *_trim_history(state.get("messages") or [], get_settings().HISTORY_WINDOW),
+        *history,
     ]
     ai = get_llm().invoke(messages)
     return {"messages": [ai], "answer": _text_of(ai), "status": "wrapped"}

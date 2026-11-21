@@ -1,0 +1,568 @@
+{
+  "meta": {
+    "time": "2026-11-20 20:35:51",
+    "model": "deepseek-chat",
+    "dataset": "电商订单_示例数据.csv",
+    "repeat": 1,
+    "storage": "C:\\Users\\李自涛\\Desktop\\code\\DataAnalysisAgent\\evals\\.storage"
+  },
+  "summary": {
+    "cases": 1,
+    "pass_rate": 1,
+    "intent_accuracy": 1,
+    "tool_recall": 1.0,
+    "tool_precision": 1.0,
+    "args_accuracy": null,
+    "number_hit_rate": null,
+    "avg_rounds": 8,
+    "avg_latency": 29.95,
+    "avg_tokens": 137482
+  },
+  "results": [
+    {
+      "case": {
+        "id": "report-02",
+        "tag": "report",
+        "question": "生成一份分析报告，重点看销售额随时间的趋势",
+        "intents": [
+          "report"
+        ],
+        "required_tools": [
+          "dataset_overview"
+        ],
+        "expect_report": true,
+        "numbers": []
+      },
+      "run": {
+        "conversation_id": "C4845fe29d195",
+        "intent": "report",
+        "answer": "已生成结构化分析报告《评测样本_电商订单 数据分析报告》，共 5 个章节、4 张图表、6 条关键发现 （report_id: R9ecc83998be7）。\n\n核心结论：月度销售额整体呈下降趋势，最高点为 2025-02（合计 1.387e+06），最低点为 2025-05（合计 197,076.92），峰谷相差约 7.0 倍，且峰值主要由家用电器贡献。；渠道结构高度集中：天猫销售额合计 2.438e+06，占展示总量的 37.8%，为第一渠道；最低的私域小程序仅 840,073.4，约为天猫的 34.5%。",
+        "tool_calls": [
+          {
+            "name": "dataset_overview",
+            "args": {}
+          },
+          {
+            "name": "detect_missing_values",
+            "args": {}
+          },
+          {
+            "name": "drop_columns",
+            "args": {
+              "columns": [
+                "数据来源系统"
+              ]
+            }
+          },
+          {
+            "name": "convert_types",
+            "args": {
+              "columns": [
+                "订单日期"
+              ],
+              "target_type": "datetime"
+            }
+          },
+          {
+            "name": "drop_duplicates",
+            "args": {}
+          },
+          {
+            "name": "analyze_column",
+            "args": {
+              "column": "订单日期"
+            }
+          },
+          {
+            "name": "compute_statistics",
+            "args": {
+              "columns": [
+                "销售额"
+              ],
+              "group_by": [
+                "订单日期"
+              ],
+              "metrics": [
+                "sum",
+                "count"
+              ],
+              "top_n": 30
+            }
+          },
+          {
+            "name": "plot_line",
+            "args": {
+              "x": "订单日期",
+              "y": "销售额",
+              "agg": "sum",
+              "title": "月度销售额走势（2025-01 ~ 2026-06）"
+            }
+          },
+          {
+            "name": "compute_statistics",
+            "args": {
+              "columns": [
+                "销售额"
+              ],
+              "group_by": [
+                "销售渠道"
+              ],
+              "metrics": [
+                "sum",
+                "mean",
+                "count"
+              ]
+            }
+          },
+          {
+            "name": "compute_statistics",
+            "args": {
+              "columns": [
+                "销售额"
+              ],
+              "group_by": [
+                "商品类别"
+              ],
+              "metrics": [
+                "sum",
+                "mean",
+                "count"
+              ]
+            }
+          },
+          {
+            "name": "compute_statistics",
+            "args": {
+              "columns": [
+                "销售额"
+              ],
+              "group_by": [
+                "地区"
+              ],
+              "metrics": [
+                "sum",
+                "mean",
+                "count"
+              ]
+            }
+          },
+          {
+            "name": "value_counts",
+            "args": {
+              "column": "是否退货"
+            }
+          },
+          {
+            "name": "plot_line",
+            "args": {
+              "x": "订单日期",
+              "y": "销售额",
+              "hue": "商品类别",
+              "agg": "sum",
+              "title": "各商品类别月度销售额走势"
+            }
+          },
+          {
+            "name": "plot_bar",
+            "args": {
+              "x": "销售渠道",
+              "y": "销售额",
+              "agg": "sum",
+              "title": "各销售渠道销售额合计"
+            }
+          },
+          {
+            "name": "plot_histogram",
+            "args": {
+              "column": "销售额",
+              "bins": 40,
+              "title": "单笔订单销售额分布"
+            }
+          },
+          {
+            "name": "detect_outliers",
+            "args": {
+              "column": "销售额",
+              "method": "iqr",
+              "threshold": 1.5
+            }
+          },
+          {
+            "name": "filter_rows",
+            "args": {
+              "filters": [
+                {
+                  "column": "订单日期",
+                  "op": "between",
+                  "value": [
+                    "2025-02-26",
+                    "2025-02-26"
+                  ]
+                }
+              ],
+              "columns": [
+                "订单号",
+                "订单日期",
+                "客户等级",
+                "地区",
+                "销售渠道",
+                "商品类别",
+                "商品名称",
+                "数量",
+                "单价",
+                "折扣率",
+                "销售额",
+                "是否退货"
+              ],
+              "limit": 10
+            }
+          },
+          {
+            "name": "filter_rows",
+            "args": {
+              "filters": [
+                {
+                  "column": "订单日期",
+                  "op": "between",
+                  "value": [
+                    "2025-10-08",
+                    "2025-10-08"
+                  ]
+                }
+              ],
+              "columns": [
+                "订单号",
+                "订单日期",
+                "销售渠道",
+                "商品类别",
+                "商品名称",
+                "数量",
+                "单价",
+                "折扣率",
+                "销售额"
+              ],
+              "limit": 10
+            }
+          },
+          {
+            "name": "compute_statistics",
+            "args": {
+              "columns": [
+                "销售额",
+                "满意度评分"
+              ],
+              "group_by": [
+                "是否退货"
+              ],
+              "metrics": [
+                "count",
+                "mean",
+                "median"
+              ]
+            }
+          },
+          {
+            "name": "correlation_analysis",
+            "args": {
+              "columns": [
+                "数量",
+                "单价",
+                "折扣率",
+                "销售额",
+                "满意度评分"
+              ],
+              "method": "spearman",
+              "top_n": 8
+            }
+          }
+        ],
+        "rounded_rounds": 8,
+        "report_id": "R9ecc83998be7",
+        "latency": 29.95,
+        "tokens": 137482,
+        "status": "completed"
+      },
+      "runs": [
+        {
+          "conversation_id": "C4845fe29d195",
+          "intent": "report",
+          "answer": "已生成结构化分析报告《评测样本_电商订单 数据分析报告》，共 5 个章节、4 张图表、6 条关键发现 （report_id: R9ecc83998be7）。\n\n核心结论：月度销售额整体呈下降趋势，最高点为 2025-02（合计 1.387e+06），最低点为 2025-05（合计 197,076.92），峰谷相差约 7.0 倍，且峰值主要由家用电器贡献。；渠道结构高度集中：天猫销售额合计 2.438e+06，占展示总量的 37.8%，为第一渠道；最低的私域小程序仅 840,073.4，约为天猫的 34.5%。",
+          "tool_calls": [
+            {
+              "name": "dataset_overview",
+              "args": {}
+            },
+            {
+              "name": "detect_missing_values",
+              "args": {}
+            },
+            {
+              "name": "drop_columns",
+              "args": {
+                "columns": [
+                  "数据来源系统"
+                ]
+              }
+            },
+            {
+              "name": "convert_types",
+              "args": {
+                "columns": [
+                  "订单日期"
+                ],
+                "target_type": "datetime"
+              }
+            },
+            {
+              "name": "drop_duplicates",
+              "args": {}
+            },
+            {
+              "name": "analyze_column",
+              "args": {
+                "column": "订单日期"
+              }
+            },
+            {
+              "name": "compute_statistics",
+              "args": {
+                "columns": [
+                  "销售额"
+                ],
+                "group_by": [
+                  "订单日期"
+                ],
+                "metrics": [
+                  "sum",
+                  "count"
+                ],
+                "top_n": 30
+              }
+            },
+            {
+              "name": "plot_line",
+              "args": {
+                "x": "订单日期",
+                "y": "销售额",
+                "agg": "sum",
+                "title": "月度销售额走势（2025-01 ~ 2026-06）"
+              }
+            },
+            {
+              "name": "compute_statistics",
+              "args": {
+                "columns": [
+                  "销售额"
+                ],
+                "group_by": [
+                  "销售渠道"
+                ],
+                "metrics": [
+                  "sum",
+                  "mean",
+                  "count"
+                ]
+              }
+            },
+            {
+              "name": "compute_statistics",
+              "args": {
+                "columns": [
+                  "销售额"
+                ],
+                "group_by": [
+                  "商品类别"
+                ],
+                "metrics": [
+                  "sum",
+                  "mean",
+                  "count"
+                ]
+              }
+            },
+            {
+              "name": "compute_statistics",
+              "args": {
+                "columns": [
+                  "销售额"
+                ],
+                "group_by": [
+                  "地区"
+                ],
+                "metrics": [
+                  "sum",
+                  "mean",
+                  "count"
+                ]
+              }
+            },
+            {
+              "name": "value_counts",
+              "args": {
+                "column": "是否退货"
+              }
+            },
+            {
+              "name": "plot_line",
+              "args": {
+                "x": "订单日期",
+                "y": "销售额",
+                "hue": "商品类别",
+                "agg": "sum",
+                "title": "各商品类别月度销售额走势"
+              }
+            },
+            {
+              "name": "plot_bar",
+              "args": {
+                "x": "销售渠道",
+                "y": "销售额",
+                "agg": "sum",
+                "title": "各销售渠道销售额合计"
+              }
+            },
+            {
+              "name": "plot_histogram",
+              "args": {
+                "column": "销售额",
+                "bins": 40,
+                "title": "单笔订单销售额分布"
+              }
+            },
+            {
+              "name": "detect_outliers",
+              "args": {
+                "column": "销售额",
+                "method": "iqr",
+                "threshold": 1.5
+              }
+            },
+            {
+              "name": "filter_rows",
+              "args": {
+                "filters": [
+                  {
+                    "column": "订单日期",
+                    "op": "between",
+                    "value": [
+                      "2025-02-26",
+                      "2025-02-26"
+                    ]
+                  }
+                ],
+                "columns": [
+                  "订单号",
+                  "订单日期",
+                  "客户等级",
+                  "地区",
+                  "销售渠道",
+                  "商品类别",
+                  "商品名称",
+                  "数量",
+                  "单价",
+                  "折扣率",
+                  "销售额",
+                  "是否退货"
+                ],
+                "limit": 10
+              }
+            },
+            {
+              "name": "filter_rows",
+              "args": {
+                "filters": [
+                  {
+                    "column": "订单日期",
+                    "op": "between",
+                    "value": [
+                      "2025-10-08",
+                      "2025-10-08"
+                    ]
+                  }
+                ],
+                "columns": [
+                  "订单号",
+                  "订单日期",
+                  "销售渠道",
+                  "商品类别",
+                  "商品名称",
+                  "数量",
+                  "单价",
+                  "折扣率",
+                  "销售额"
+                ],
+                "limit": 10
+              }
+            },
+            {
+              "name": "compute_statistics",
+              "args": {
+                "columns": [
+                  "销售额",
+                  "满意度评分"
+                ],
+                "group_by": [
+                  "是否退货"
+                ],
+                "metrics": [
+                  "count",
+                  "mean",
+                  "median"
+                ]
+              }
+            },
+            {
+              "name": "correlation_analysis",
+              "args": {
+                "columns": [
+                  "数量",
+                  "单价",
+                  "折扣率",
+                  "销售额",
+                  "满意度评分"
+                ],
+                "method": "spearman",
+                "top_n": 8
+              }
+            }
+          ],
+          "rounded_rounds": 8,
+          "report_id": "R9ecc83998be7",
+          "latency": 29.95,
+          "tokens": 137482,
+          "status": "completed"
+        }
+      ],
+      "score": {
+        "tool_recall": 1.0,
+        "tool_precision": 1.0,
+        "passed": true,
+        "intent_ok": true,
+        "args_ok": true,
+        "numbers_ok": true,
+        "keywords_ok": true,
+        "report_ok": true,
+        "no_tools_ok": true,
+        "number_detail": [],
+        "missing_tools": [],
+        "called_tools": [
+          "analyze_column",
+          "compute_statistics",
+          "convert_types",
+          "correlation_analysis",
+          "dataset_overview",
+          "detect_missing_values",
+          "detect_outliers",
+          "drop_columns",
+          "drop_duplicates",
+          "filter_rows",
+          "plot_bar",
+          "plot_histogram",
+          "plot_line",
+          "value_counts"
+        ]
+      },
+      "pass_count": 1
+    }
+  ]
+}
