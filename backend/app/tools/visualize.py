@@ -15,6 +15,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
+from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 from langchain_core.tools import tool  # noqa: E402
 
 from ..dataset.profiler import is_datetime, is_numeric, to_jsonable  # noqa: E402
@@ -35,6 +36,16 @@ AGG_SET = ("sum", "mean", "count", "median", "max", "min")
 _STYLED = False
 
 
+def _short_num(value: float) -> str:
+    """图例里的短数字：大数不带小数，小数保留必要精度。"""
+
+    if abs(value) >= 100:
+        return f"{value:,.0f}"
+    if abs(value) >= 10:
+        return f"{value:,.1f}"
+    return f"{value:,.2f}"
+
+
 def _style() -> None:
     """配置中文字体与画布风格（只做一次）。"""
 
@@ -52,11 +63,78 @@ def _style() -> None:
     plt.rcParams["axes.unicode_minus"] = False
     plt.rcParams["figure.dpi"] = s.CHART_DPI
     plt.rcParams["figure.figsize"] = (9.0, 4.8)
+    # 浅色分析面板：白底、浅灰网格、柔和蓝作为唯一强调色
+    plt.rcParams.update(
+        {
+            "figure.facecolor": "#ffffff",
+            "axes.facecolor": "#ffffff",
+            "savefig.facecolor": "#ffffff",
+            "savefig.edgecolor": "#ffffff",
+            "axes.edgecolor": "#e2e8f0",
+            "axes.labelcolor": "#64748b",
+            "axes.titlecolor": "#1e2a3a",
+            "axes.titlesize": 11.5,
+            "axes.titleweight": "medium",
+            "axes.labelsize": 9,
+            "xtick.color": "#7c8aa0",
+            "ytick.color": "#7c8aa0",
+            "xtick.labelsize": 8.5,
+            "ytick.labelsize": 8.5,
+            "text.color": "#334155",
+            "grid.color": "#f2f5fa",
+            "grid.linewidth": 0.6,
+            "grid.alpha": 1.0,
+            "axes.grid": True,
+            "axes.axisbelow": True,
+            "legend.frameon": False,
+            "legend.fontsize": 8,
+        }
+    )
+    plt.rcParams["axes.spines.top"] = False
+    plt.rcParams["axes.spines.right"] = False
     _STYLED = True
 
 
-_PALETTE = ["#4C72B0", "#DD8452", "#55A868", "#C44E52", "#8172B3",
-            "#937860", "#DA8BC3", "#8C8C8C", "#CCB974", "#64B5CD"]
+_ACCENT = "#3f6fd8"
+# 一个强调色 + 中性阶：第一个系列负责表达，其余退到背景里
+_PALETTE = [_ACCENT, "#9aa7bb", "#7f8da3", "#c3ccda", "#8f9db2",
+            "#d5dce6", "#6f7f9c", "#b0bccd", "#a9b6c9", "#ccd5e2"]
+_BAR_CMAP = LinearSegmentedColormap.from_list("soft_blue_purple", ["#7d9bec", "#a79bf0"])
+
+
+def _gradient_bars(ax, patches, *, horizontal: bool = False, alpha: float = 0.92) -> None:
+    """给柱体铺一层柔和蓝紫渐变，并保持坐标范围不变。"""
+
+    if not patches:
+        return
+    xlim, ylim = ax.get_xlim(), ax.get_ylim()
+    for patch in patches:
+        x0, y0 = float(patch.get_x()), float(patch.get_y())
+        width, height = float(patch.get_width()), float(patch.get_height())
+        x_lo, x_hi = sorted((x0, x0 + width))
+        y_lo, y_hi = sorted((y0, y0 + height))
+        if x_hi <= x_lo or y_hi <= y_lo:
+            continue
+        grad = (
+            np.linspace(0, 1, 192).reshape(1, -1)
+            if horizontal
+            else np.linspace(0, 1, 192).reshape(-1, 1)
+        )
+        ax.imshow(
+            grad,
+            extent=(x_lo, x_hi, y_lo, y_hi),
+            aspect="auto",
+            origin="lower",
+            cmap=_BAR_CMAP,
+            alpha=alpha,
+            interpolation="bicubic",
+            zorder=patch.get_zorder() + 0.2,
+            clip_path=patch,
+        )
+        patch.set_facecolor("none")
+        patch.set_edgecolor("none")
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
 
 
 def _finish(
@@ -344,19 +422,27 @@ def plot_bar(
     if wide.empty:
         return fail("plot_bar", "没有可绘制的数据，请检查字段取值是否为空。")
 
-    chart_title = title or f"{xcol} 的 {y_label} 对比"
+    chart_title = title or f"{xcol}的{y_label}对比"
     fig, ax = plt.subplots(figsize=(9.0, 5.2 if horizontal else 4.8))
 
     positions = np.arange(len(wide))
     width = 0.8 / max(len(wide.columns), 1)
+    single_series = len(wide.columns) == 1
     for i, col in enumerate(wide.columns):
         offset = (i - (len(wide.columns) - 1) / 2) * width
         label = str(col) if len(wide.columns) > 1 else None
+        if single_series:
+            values = wide[col].to_numpy()
+            peak = float(np.nanmax(values)) if len(values) else 0.0
+            colors = [_ACCENT if float(v) == peak else "#c0cad8" for v in values]
+        else:
+            colors = _PALETTE[i % len(_PALETTE)]
         bars = (
-            ax.barh(positions + offset, wide[col].to_numpy(), height=width * 0.92, label=label, color=_PALETTE[i % len(_PALETTE)])
+            ax.barh(positions + offset, wide[col].to_numpy(), height=width * 0.92, label=label, color=colors)
             if horizontal
-            else ax.bar(positions + offset, wide[col].to_numpy(), width=width * 0.92, label=label, color=_PALETTE[i % len(_PALETTE)])
+            else ax.bar(positions + offset, wide[col].to_numpy(), width=width * 0.92, label=label, color=colors)
         )
+        _gradient_bars(ax, bars.patches, horizontal=horizontal)
         if len(wide.columns) == 1:
             ax.bar_label(bars, fmt="%.2f", padding=2, fontsize=8)
 
@@ -429,7 +515,7 @@ def plot_histogram(
     if series.empty:
         return fail("plot_histogram", f"字段「{col}」没有有效的数值。")
 
-    chart_title = title or f"{col} 的分布"
+    chart_title = title or f"{col}的分布"
     fig, ax = plt.subplots()
     detail: dict[str, Any] = {}
 
@@ -443,16 +529,20 @@ def plot_histogram(
         main_values = series.to_numpy()
     else:
         values = series.to_numpy()
-        ax.hist(values, bins=bins, color=_PALETTE[0], alpha=0.85, density=True, edgecolor="white", linewidth=0.5)
+        _, _, patches = ax.hist(
+            values, bins=bins, alpha=1.0, density=True,
+            edgecolor="#ffffff", linewidth=0.6,
+        )
+        _gradient_bars(ax, patches, alpha=0.85)
         main_values = values
         if kde:
             grid = np.linspace(float(values.min()), float(values.max()), 200)
-            ax.plot(grid, _kde(values[:5000], grid), color=_PALETTE[3], linewidth=1.8, label="核密度 curve")
+            ax.plot(grid, _kde(values[:5000], grid), color="#475569", linewidth=1.6, label="核密度曲线")
             ax.legend(fontsize=8)
 
     mean, median = float(np.mean(main_values)), float(np.median(main_values))
-    ax.axvline(mean, color=_PALETTE[2], linestyle="--", linewidth=1.4, label=f"均值 {fmt_num(mean)}")
-    ax.axvline(median, color=_PALETTE[1], linestyle=":", linewidth=1.4, label=f"中位数 {fmt_num(median)}")
+    ax.axvline(mean, color=_ACCENT, linestyle="--", linewidth=1.4, label=f"均值 {_short_num(mean)}")
+    ax.axvline(median, color="#475569", linestyle=":", linewidth=1.4, label=f"中位数 {_short_num(median)}")
     ax.set_title(chart_title)
     ax.set_xlabel(col)
     ax.set_ylabel("密度")
@@ -601,7 +691,7 @@ def plot_scatter(
         return fail("plot_scatter", "这两个字段没有成对的有效数值，无法绘制散点图。")
     sampled = work if len(work) <= sample else work.sample(sample, random_state=42)
 
-    chart_title = title or f"{xcol} 与 {ycol} 的关系"
+    chart_title = title or f"{xcol}与{ycol}的关系"
     fig, ax = plt.subplots(figsize=(8.2, 5.6))
 
     if huecol and sampled[huecol].nunique(dropna=True) <= 8:
@@ -618,7 +708,7 @@ def plot_scatter(
         ys = work[ycol].to_numpy(dtype=float)
         k, b = np.polyfit(xs, ys, 1)
         grid = np.linspace(xs.min(), xs.max(), 50)
-        ax.plot(grid, k * grid + b, color=_PALETTE[3], linewidth=2.0, label="线性趋势")
+        ax.plot(grid, k * grid + b, color="#334155", linewidth=1.8, label="线性趋势")
         pred = k * xs + b
         ss_res = float(((ys - pred) ** 2).sum())
         ss_tot = float(((ys - ys.mean()) ** 2).sum())
@@ -634,7 +724,7 @@ def plot_scatter(
     strength = "强" if abs(r_value) >= 0.7 else ("中等" if abs(r_value) >= 0.4 else "弱")
     direction = "正" if r_value > 0 else "负"
     summary = (
-        f"散点图已生成：{xcol} 与 {ycol} 的皮尔逊相关系数 r={r_value:.3f}（{strength}{direction}相关），"
+        f"散点图已生成：{xcol}与{ycol}的皮尔逊相关系数 r={r_value:.3f}（{strength}{direction}相关），"
         f"共 {len(work)} 个有效样本点"
     )
     summary += f"，绘制时抽样 {len(sampled)} 个。" if len(sampled) < len(work) else "。"
@@ -693,10 +783,13 @@ def plot_box(
         if not groups:
             return fail("plot_box", "分组后没有数据。")
         bp = _boxplot(ax, groups, top)
-        for i, box in enumerate(bp["boxes"]):
-            box.set_facecolor(_PALETTE[i % len(_PALETTE)])
-            box.set_alpha(0.7)
-        plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
+        for box in bp["boxes"]:
+            box.set_facecolor("#f1f5fb")
+            box.set_edgecolor("#9aa7bb")
+        for median in bp.get("medians", []):
+            median.set_color(_ACCENT)
+            median.set_linewidth(1.6)
+        plt.setp(ax.get_xticklabels(), rotation=0, ha="center")
         chart_title = title or f"不同{xcol}下的{ycol}分布"
         means = {g: float(np.mean(vals)) if vals.size else None for g, vals in zip(top, groups)}
         best = max(means, key=lambda k: means[k] if means[k] is not None else -np.inf)
@@ -731,10 +824,13 @@ def plot_box(
             return fail("plot_box", "这些字段都没有有效数值。")
         cols = [c for c, _ in keep]
         bp = _boxplot(ax, [v for _, v in keep], cols)
-        for i, box in enumerate(bp["boxes"]):
-            box.set_facecolor(_PALETTE[i % len(_PALETTE)])
-            box.set_alpha(0.7)
-        plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
+        for box in bp["boxes"]:
+            box.set_facecolor("#f1f5fb")
+            box.set_edgecolor("#9aa7bb")
+        for median in bp.get("medians", []):
+            median.set_color(_ACCENT)
+            median.set_linewidth(1.6)
+        plt.setp(ax.get_xticklabels(), rotation=0, ha="center")
         chart_title = title or "各数值字段的分布对比"
         spread = {
             c: float(np.percentile(v, 75) - np.percentile(v, 25)) for c, v in keep

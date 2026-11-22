@@ -138,27 +138,80 @@ function renderDatasetList() {
     if (ds.id === state.currentId) li.classList.add('active');
     li.innerHTML = `<span class="name">${escapeHtml(ds.name)}</span>
       <span class="meta">${ds.rows}×${ds.cols} · ${ds.quality_score ?? '-'}分</span>`;
-    li.onclick = () => selectDataset(ds.id);
+    li.onclick = () => {
+      if (window.innerWidth <= 900) setMobileTab('chat');
+      selectDataset(ds.id);
+    };
     list.appendChild(li);
   });
 }
 
-async function uploadFile(file) {
+function uploadFile(file) {
   const status = $('upload-status');
+  const progress = $('upload-progress');
+  const fill = progress ? progress.querySelector('.progress-bar') : null;
+  const dropzone = $('dropzone');
+  const setPct = (pct) => {
+    if (fill) fill.style.transform = `scaleX(${Math.min(100, Math.max(0, pct)) / 100})`;
+  };
+  const cleanup = () => {
+    if (progress) progress.hidden = true;
+    if (dropzone) dropzone.classList.remove('uploading');
+  };
+
   status.className = 'status';
-  status.textContent = `正在上传并解析 ${file.name} …`;
+  status.textContent = `正在上传 ${file.name} …`;
+  if (progress) progress.hidden = false;
+  if (dropzone) dropzone.classList.add('uploading');
+  setPct(0);
+
   const form = new FormData();
   form.append('file', file);
-  try {
-    const data = await api('/api/datasets/upload', { method: 'POST', body: form });
-    status.className = 'status ok';
-    status.textContent = `已解析：${data.dataset.rows} 行 × ${data.dataset.cols} 列，质量评分 ${data.dataset.quality_score}`;
-    await loadDatasets();
-    await selectDataset(data.dataset.id, data.profile, data.warnings);
-  } catch (err) {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/datasets/upload');
+
+  xhr.upload.onprogress = (e) => {
+    if (!e.lengthComputable) return;
+    const pct = Math.round((e.loaded / e.total) * 100);
+    setPct(pct);
+    status.textContent = `正在上传 ${file.name} … ${pct}%`;
+  };
+
+  xhr.onload = async () => {
+    if (xhr.status < 200 || xhr.status >= 300) {
+      let detail = `HTTP ${xhr.status}`;
+      try {
+        detail = JSON.parse(xhr.responseText).detail || detail;
+      } catch (err) { /* 保持默认信息 */ }
+      cleanup();
+      status.className = 'status err';
+      status.textContent = `上传失败：${detail}`;
+      return;
+    }
+    setPct(100);
+    status.textContent = '上传完成，正在解析数据…';
+    try {
+      const data = JSON.parse(xhr.responseText);
+      await loadDatasets();
+      await selectDataset(data.dataset.id, data.profile, data.warnings);
+      if (window.innerWidth <= 900) setMobileTab('chat');
+      status.className = 'status ok';
+      status.textContent = `已解析：${data.dataset.rows} 行 × ${data.dataset.cols} 列，质量评分 ${data.dataset.quality_score}`;
+    } catch (err) {
+      status.className = 'status err';
+      status.textContent = `解析失败：${err.message}`;
+    } finally {
+      cleanup();
+    }
+  };
+
+  xhr.onerror = () => {
+    cleanup();
     status.className = 'status err';
-    status.textContent = `上传失败：${err.message}`;
-  }
+    status.textContent = '上传失败：网络中断';
+  };
+
+  xhr.send(form);
 }
 
 async function selectDataset(id, presetProfile, presetWarnings) {
@@ -373,8 +426,64 @@ async function attachLatestConversation(datasetId) {
   await switchConversation(list[0].id);
 }
 
+let welcomeTemplate = '';
+
 function clearMessages() {
-  $('messages').innerHTML = '';
+  $('messages').innerHTML = welcomeTemplate || '';
+}
+
+/* 只有用户本来就在底部时才自动滚动，避免打断阅读 */
+function isNearBottom(el, threshold = 140) {
+  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+}
+
+function appendSticky(node) {
+  const box = $('messages');
+  const stick = isNearBottom(box);
+  box.appendChild(node);
+  if (stick) box.scrollTop = box.scrollHeight;
+  return node;
+}
+
+function scrollBottom(force = false) {
+  const box = $('messages');
+  if (force || isNearBottom(box)) box.scrollTop = box.scrollHeight;
+}
+
+async function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) { /* 走下面的兜底 */ }
+  }
+  try {
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(area);
+    return ok;
+  } catch (err) {
+    return false;
+  }
+}
+
+function attachCopyButton(container, getText) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'copy-btn';
+  btn.textContent = '复制回答';
+  btn.onclick = async () => {
+    const ok = await copyText((getText() || '').trim());
+    btn.textContent = ok ? '已复制 ✓' : '复制失败';
+    setTimeout(() => { btn.textContent = '复制回答'; }, 1600);
+  };
+  container.appendChild(btn);
+  return btn;
 }
 
 function addMessage(role, html) {
@@ -382,9 +491,16 @@ function addMessage(role, html) {
   wrap.className = `msg ${role}`;
   const label = role === 'user' ? '你' : (role === 'assistant' ? 'Agent' : '系统');
   wrap.innerHTML = `<span class="role">${label}</span><div class="bubble">${html}</div>`;
-  $('messages').appendChild(wrap);
-  $('messages').scrollTop = $('messages').scrollHeight;
-  return wrap.querySelector('.bubble');
+  const bubble = wrap.querySelector('.bubble');
+  if (role === 'assistant') {
+    attachCopyButton(bubble, () => {
+      const clone = bubble.cloneNode(true);
+      clone.querySelectorAll('.copy-btn').forEach((btn) => btn.remove());
+      return clone.innerText;
+    });
+  }
+  appendSticky(wrap);
+  return bubble;
 }
 
 /* ----------------------------- 对话（SSE 流式） ----------------------------- */
@@ -404,8 +520,7 @@ function createAssistantShell(question) {
       <div class="steps"></div>
     </details>`;
   wrap.dataset.question = question;
-  $('messages').appendChild(wrap);
-  $('messages').scrollTop = $('messages').scrollHeight;
+  appendSticky(wrap);
   return {
     root: wrap,
     status: wrap.querySelector('.status'),
@@ -427,7 +542,7 @@ function appendStep(shell, step) {
   let detail = '';
   if (step.tool_calls) {
     detail = step.tool_calls
-      .map((c) => `<div class="detail">⚙ ${escapeHtml(c.name)}(${escapeHtml(JSON.stringify(c.args))})</div>`)
+      .map((c) => `<div class="detail">${escapeHtml(c.name)}(${escapeHtml(JSON.stringify(c.args))})</div>`)
       .join('');
   }
   if (step.results) {
@@ -436,15 +551,31 @@ function appendStep(shell, step) {
   if (step.plan && step.plan.length) {
     detail += step.plan.map((p, idx) => `<div class="detail">${idx + 1}. ${escapeHtml(p)}</div>`).join('');
   }
-  node.innerHTML = `<div class="head">${escapeHtml(step.label || step.node)}</div>${detail}`;
+  const index = String(shell.stepCount).padStart(2, '0');
+  node.innerHTML = `<div class="head"><span class="idx">${index}</span><span>${escapeHtml(step.label || step.node)}</span></div>${detail}`;
   shell.steps.appendChild(node);
   shell.traceSummary.textContent = `执行过程 · ${shell.stepCount} 步`;
-  $('messages').scrollTop = $('messages').scrollHeight;
+  scrollBottom();
 }
 
 function renderArtifacts(shell, artifacts) {
-  shell.artifacts.innerHTML = (artifacts || []).map((a) =>
-    `<a class="chip" href="${a.url}" target="_blank" rel="noreferrer">📊 ${escapeHtml(a.title)}</a>`).join('');
+  shell.artifacts.innerHTML = '';
+  (artifacts || []).forEach((a) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.innerHTML = `<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2.5 13V8.5M6.2 13V5M9.9 13V9.5M13.5 13V3.5"/></svg><span>${escapeHtml(a.title)}</span>`;
+    chip.onclick = () => openChart(a.url, a.title);
+    shell.artifacts.appendChild(chip);
+  });
+}
+
+function openChart(url, title) {
+  $('chart-title').textContent = title || '图表';
+  $('chart-img').src = url;
+  $('chart-img').alt = title || '图表';
+  $('chart-open').href = url;
+  openModal('modal-chart');
 }
 
 async function sendMessage(message) {
@@ -517,6 +648,9 @@ async function sendMessage(message) {
         btn.onclick = () => openReport(final.report_id);
         shell.answer.appendChild(btn);
       }
+      attachCopyButton(shell.root.querySelector('.bubble'), () => shell.answer.innerText);
+      if (shell.stepCount > 0) shell.trace.open = false;
+      scrollBottom();
     }
   } catch (err) {
     shell.status.remove();
@@ -525,7 +659,7 @@ async function sendMessage(message) {
     state.busy = false;
     $('btn-send').disabled = false;
     $('btn-report').disabled = false;
-    $('messages').scrollTop = $('messages').scrollHeight;
+    scrollBottom();
   }
 }
 
@@ -556,6 +690,8 @@ async function generateReport() {
     btn.textContent = '查看完整报告';
     btn.onclick = () => openReport(data.report_id);
     shell.answer.appendChild(btn);
+    attachCopyButton(shell.root.querySelector('.bubble'), () => shell.answer.innerText);
+    if (shell.stepCount > 0) shell.trace.open = false;
   } catch (err) {
     shell.status.remove();
     shell.answer.innerHTML = `<span style="color:var(--danger)">报告生成失败：${escapeHtml(err.message)}</span>`;
@@ -602,6 +738,13 @@ async function showTools() {
 function openModal(id) { $(id).hidden = false; }
 function closeModal(id) { $(id).hidden = true; }
 
+function setMobileTab(tab) {
+  if (document.body) document.body.dataset.tab = tab;
+  document.querySelectorAll('#mobile-tabs button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+}
+
 /* ----------------------------- 事件绑定 ----------------------------- */
 function bindEvents() {
   const dropzone = $('dropzone');
@@ -636,6 +779,21 @@ function bindEvents() {
   const deleteBtn = $('btn-delete-conv');
   if (deleteBtn) deleteBtn.onclick = deleteCurrentConversation;
 
+  const tabs = $('mobile-tabs');
+  if (tabs) {
+    tabs.querySelectorAll('button').forEach((btn) => {
+      btn.onclick = () => setMobileTab(btn.dataset.tab);
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal:not([hidden])').forEach((modal) => {
+        modal.hidden = true;
+      });
+    }
+  });
+
   $('input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -658,6 +816,8 @@ function bindEvents() {
 
 /* ----------------------------- 启动 ----------------------------- */
 (async function init() {
+  welcomeTemplate = $('messages').innerHTML;
+  if (document.body && !document.body.dataset.tab) setMobileTab('data');
   try {
     bindEvents();
   } catch (err) {

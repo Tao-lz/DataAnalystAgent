@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6f7fa">
 <title>数据分析 Agent 控制台</title>
-<link rel="stylesheet" href="/static/style.css?v=20261025c">
+<link rel="stylesheet" href="/static/style.css?v=20261122c">
 </head>
 <body>
 <header class="topbar">
@@ -12,15 +13,26 @@
     <span class="logo">DA</span>
     <div>
       <h1>数据分析 Agent 控制台</h1>
-      <p id="subtitle">LangGraph · Tool Calling · Pandas · Matplotlib · UI 2026-10-25c</p>
+      <p id="subtitle">LangGraph · Tool Calling · Pandas · Matplotlib · UI 2026-11-22c</p>
     </div>
   </div>
   <div class="topbar-actions">
     <span id="health-badge" class="badge">检查中…</span>
-    <button class="ghost" id="btn-tools">工具清单</button>
-    <button class="ghost" id="btn-reset-conv">新会话</button>
+    <button class="ghost" id="btn-tools" aria-label="查看 Agent 可调用的工具">工具清单</button>
+    <button class="ghost" id="btn-reset-conv" aria-label="开始一个新会话">新会话</button>
   </div>
 </header>
+
+<nav class="mobile-tabs" id="mobile-tabs" aria-label="面板切换">
+  <button type="button" class="active" data-tab="data">
+    <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-7Z"/></svg>
+    数据
+  </button>
+  <button type="button" data-tab="chat">
+    <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 8.2c0 2.4-2.7 4.3-6 4.3-.7 0-1.4-.1-2-.2L2.5 14l.7-2.4C2.4 10.6 2 9.4 2 8.2 2 5.8 4.7 3.9 8 3.9s6 1.9 6 4.3Z"/></svg>
+    对话
+  </button>
+</nav>
 
 <main class="layout">
   <!-- ------------------------------ 左侧：数据 ------------------------------ -->
@@ -33,7 +45,8 @@
         <p class="dz-hint">或 <button class="link" id="btn-pick">点击选择文件</button></p>
         <p class="dz-hint small">支持 .csv / .xlsx / .xls / .tsv，自动识别编码与表头</p>
       </div>
-      <div id="upload-status" class="status"></div>
+      <div id="upload-status" class="status" aria-live="polite"></div>
+      <div class="progress" id="upload-progress" hidden><div class="progress-bar"></div></div>
     </section>
 
     <section>
@@ -68,7 +81,7 @@
         <h2>分析对话</h2>
         <div class="conv-bar">
           <span class="small" id="conv-count">历史会话</span>
-          <select id="conv-select" class="conv-select" title="切换历史会话">
+          <select id="conv-select" class="conv-select" title="切换历史会话" aria-label="切换历史会话">
             <option value="">新会话（尚未开始）</option>
           </select>
           <button class="ghost mini" id="btn-rename-conv" title="重命名当前会话" disabled>重命名</button>
@@ -84,19 +97,18 @@
       </div>
     </div>
 
-    <div id="messages" class="messages">
+    <div id="messages" class="messages" role="log" aria-live="polite">
       <div class="welcome">
-        <h3>👋 开始你的第一个分析</h3>
-        <p>上传 CSV / Excel 后，用自然语言提问即可。Agent 会自主决定调用哪些工具：
-           数据画像、缺失值检测、数据清洗、统计计算、相关性分析、图表可视化，最后输出结构化报告。</p>
-        <p class="small">所有轮次的上下文通过 LangGraph Checkpoint 持久化在本地 SQLite 中，刷新页面或重启服务都不会丢。</p>
+        <h3>开始分析</h3>
+        <p>上传 CSV 或 Excel，然后直接提问。Agent 会自己判断该看哪些字段、调哪些工具，并给出带数字的结论。</p>
+        <p class="small">多轮上下文保存在本地 SQLite，刷新页面或重启服务后仍可继续。</p>
       </div>
     </div>
 
     <div class="composer">
       <textarea id="input" rows="2" placeholder="例如：按地区和商品类别分组，看销售额排名，并画一张柱状图"></textarea>
       <div class="composer-actions">
-        <span id="composer-hint" class="small">Enter 发送 · Shift+Enter 换行</span>
+        <span id="composer-hint" class="small">Enter 发送 · Shift+Enter 换行 · Esc 关闭弹窗</span>
         <div>
           <button class="ghost" id="btn-report">生成完整报告</button>
           <button class="primary" id="btn-send">发送</button>
@@ -142,6 +154,20 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=20261025c"></script>
+<!-- 图表放大 -->
+<div class="modal" id="modal-chart" hidden>
+  <div class="modal-box chart-box">
+    <div class="modal-head">
+      <h3 id="chart-title">图表</h3>
+      <div>
+        <a class="ghost" id="chart-open" href="#" target="_blank" rel="noreferrer">新标签打开</a>
+        <button class="ghost" data-close="modal-chart">关闭</button>
+      </div>
+    </div>
+    <div class="chart-stage"><img id="chart-img" alt=""></div>
+  </div>
+</div>
+
+<script src="/static/app.js?v=20261122c"></script>
 </body>
 </html>
